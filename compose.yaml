@@ -1,18 +1,15 @@
 services:
-  rabbitmq:
-    image: rabbitmq
-    command: rabbitmq-server
-    expose:
-      - 5672
-      - 15672
-    healthcheck:
-      test: [ "CMD", "nc", "-z", "localhost", "5672" ]
-      interval: 5s
-      timeout: 15s
-      retries: 1
-      
   frontend:
     image: sa-frontend
     build: ./frontend
     ports:
       - "3000:3000"
+    
+  sudoku-service:
+    image: sa-sudoku-service
+    build:
+      context: ./backend/sudoku
+      dockerfile: ../Dockerfile
+    command: uvicorn main:app --host 0.0.0.0 --port 8080 --reload
+    ports:
+      - "8080:8080"

@@ -7,6 +7,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem } from "./ui/form";
 import { Button } from "./ui/button";
+import { solveSudoku } from "@/actions/sudokuActions";
 
 const formSchema = z.object({
   dimension: z.literal(2).or(z.literal(3)),
@@ -51,10 +52,14 @@ export default function SudokuForm() {
     },
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(values: z.infer<typeof formSchema>) {
     // Do something with the form values.
     // ✅ This will be type-safe and validated.
     console.log(values);
+    const response = await solveSudoku(values);
+    console.log("response: ", response);
+    setSudoku(response);
+    form.setValue("sudoku", response);
   }
 
   return (
