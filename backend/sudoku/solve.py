@@ -2,8 +2,9 @@ import numpy as np
 import pyoptinterface as poi
 from pyoptinterface import highs
 
-model = highs.Model()
+
 def solve_sudoku(dimension: int, sudoku: list[list[int | None]]):
+    model = highs.Model()
     s = dimension
     x = np.empty((s**2, s**2, s**2), dtype=object)
     
@@ -37,12 +38,12 @@ def solve_sudoku(dimension: int, sudoku: list[list[int | None]]):
     solution = get_v(x)
     
     solved_sudoku = [[0 for _ in range(s**2)] for _ in range(s**2)]
-    #for i in range(s**2):
-    #    for j in range(s**2):
-    #        for k in range(s**2):
-    #            if solution[i, j, k].astype(int) == 1:
-    #                print(f"{k+1}", end=" ")
-    #    print("\n")
+    for i in range(s**2):
+        for j in range(s**2):
+            for k in range(s**2):
+                if solution[i, j, k].astype(int) == 1:
+                    print(f"{k+1}", end=" ")
+        print("\n")
     
     for i in range(s**2):
         for j in range(s**2):
