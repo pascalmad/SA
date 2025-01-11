@@ -26,8 +26,9 @@ export default function SudokuField({
         className="text-center border caret-transparent h-full w-full outline-0 focus:bg-green-200"
         tabIndex={0}
         type="text"
+        autoComplete="off"
         name={`sudoku[${x}][${y}]`}
-        defaultValue={sudoku[x][y] === null ? "null" : sudoku[x][y]}
+        defaultValue={sudoku[x][y] === null ? "" : sudoku[x][y]}
         onKeyDown={(e) => {
           e.preventDefault();
           setActiveCell({ x, y });
