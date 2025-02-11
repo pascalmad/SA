@@ -13,7 +13,7 @@ import {
   FormMessage,
 } from "./ui/form";
 import { Button } from "./ui/button";
-import { solveSudoku } from "@/actions/sudokuActions";
+import { generateSudoku, solveSudoku } from "@/actions/sudokuActions";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
 
 const formSchema = z.object({
@@ -28,7 +28,7 @@ export default function SudokuForm() {
     [2, 1, 4, 4],
     [4, 3, 2, 4],
   ]; */
-  const sudoku3 = [
+  /* const sudoku3 = [
     [1, 2, 3, 4, 5, 6, 7, 8, 9],
     [4, 5, 6, 7, 8, 9, 1, 2, 3],
     [7, 8, 9, 1, 2, 3, 4, 5, 6],
@@ -38,7 +38,7 @@ export default function SudokuForm() {
     [3, 1, 2, 6, 4, 5, 9, 7, 8],
     [6, 4, 5, 9, 7, 8, 3, 1, 2],
     [9, 7, 8, 3, 1, 2, 6, 4, 5],
-  ];
+  ]; */
 
   const emptySudoku = (dimension: number) =>
     Array.from(
@@ -68,6 +68,8 @@ export default function SudokuForm() {
     const response = await solveSudoku(values);
     console.log("response: ", response);
     form.setValue("sudoku", response);
+    const sudoku = await generateSudoku(3);
+    console.log("sudoku: ", sudoku);
   }
 
   return (
