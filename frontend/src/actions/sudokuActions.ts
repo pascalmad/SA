@@ -1,7 +1,7 @@
 import { Sudoku } from "@/types/sudoku";
 
 export async function solveSudoku(sudoku: Sudoku) {
-  const response = await fetch("http://localhost:8080/solveamk", {
+  const response = await fetch("http://localhost:8080/sudoku/solve", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -19,14 +19,23 @@ export async function solveSudoku(sudoku: Sudoku) {
   return response.json();
 }
 
-export async function generateSudoku(dimension: number) {
-  const response = await fetch(`http://localhost:8080/create/${dimension}`, {
-    method: "GET",
-  });
+export async function generateSudoku(
+  dimension: number,
+  difficulty: string = "normal"
+) {
+  const response = await fetch(
+    `http://localhost:8080/sudoku/${dimension}?difficulty=${difficulty}`,
+    {
+      method: "GET",
+    }
+  );
 
   if (!response.ok) {
     throw new Error("Failed to generate sudoku");
   }
-
-  return response.json();
+  const data = await response.json();
+  return {
+    unsolvedSudoku: data["unsolved_sudoku"],
+    solvedSudoku: data["complete_sudoku"],
+  };
 }
