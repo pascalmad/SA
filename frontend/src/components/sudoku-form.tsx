@@ -13,39 +13,21 @@ import {
   FormMessage,
 } from "./ui/form";
 import { Button } from "./ui/button";
-import { generateSudoku, solveSudoku } from "@/actions/sudokuActions";
+import { solveSudoku } from "@/actions/sudokuActions";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
+import { Sudoku } from "@/types/sudoku";
 
 const formSchema = z.object({
   dimension: z.literal(2).or(z.literal(3)),
   sudoku: z.array(z.array(z.number().nullable())),
+  disabledFields: z.array(z.object({ x: z.number(), y: z.number() })),
 });
 
 export default function SudokuForm() {
-  /* const sudoku2 = [
-    [1, 2, 3, 4],
-    [3, 4, 1, 4],
-    [2, 1, 4, 4],
-    [4, 3, 2, 4],
-  ]; */
-  /* const sudoku3 = [
-    [1, 2, 3, 4, 5, 6, 7, 8, 9],
-    [4, 5, 6, 7, 8, 9, 1, 2, 3],
-    [7, 8, 9, 1, 2, 3, 4, 5, 6],
-    [2, 3, 1, 5, 6, 4, 8, 9, 7],
-    [5, 6, 4, 8, 9, 7, 2, 3, 1],
-    [8, 9, 7, 2, 3, 1, 5, 6, 4],
-    [3, 1, 2, 6, 4, 5, 9, 7, 8],
-    [6, 4, 5, 9, 7, 8, 3, 1, 2],
-    [9, 7, 8, 3, 1, 2, 6, 4, 5],
-  ]; */
-
   const emptySudoku = (dimension: number) =>
     Array.from(
       Array(dimension ** 2).fill(Array.from(Array(dimension ** 2).fill(null)))
     );
-
-  //const [sudoku, setSudoku] = useState<(number | null)[][]>(empty);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -68,9 +50,22 @@ export default function SudokuForm() {
     const response = await solveSudoku(values);
     console.log("response: ", response);
     form.setValue("sudoku", response);
-    const sudoku = await generateSudoku(3);
-    console.log("sudoku: ", sudoku);
+    //const sudoku = await generateSudoku(3);
+    //console.log("sudoku: ", sudoku);
   }
+
+  const disabledFields = form
+    .getValues("sudoku")
+    .flatMap((row, x) =>
+      row.map((value, y) => (value !== null ? { x, y } : null))
+    )
+    .filter((field): field is { x: number; y: number } => field !== null);
+
+  const sudoku: Sudoku = {
+    dimension: form.getValues("dimension"),
+    sudoku: form.getValues("sudoku"),
+    disabledFields: disabledFields,
+  };
 
   return (
     <Form {...form}>
@@ -110,13 +105,15 @@ export default function SudokuForm() {
         <FormField
           control={form.control}
           name="sudoku"
-          render={({ field }) => (
+          render={() => (
             <FormItem>
               <FormControl>
                 <SudokuField
-                  dimension={form.getValues("dimension")}
-                  sudoku={field.value}
+                  dimension={sudoku.dimension}
+                  sudoku={sudoku.sudoku}
+                  originalSudoku={emptySudoku(sudoku.dimension)}
                   updateSudoku={updateSudoku}
+                  disabledFields={sudoku.disabledFields}
                 />
               </FormControl>
             </FormItem>

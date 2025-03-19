@@ -5,15 +5,20 @@ import { useState } from "react";
 export default function SudokuField({
   dimension,
   sudoku,
+  originalSudoku,
   updateSudoku,
+  disabledFields,
 }: {
   dimension: 2 | 3;
   sudoku: (number | null)[][];
+  originalSudoku: (number | null)[][];
   updateSudoku: (x: number, y: number, value: number | null) => void;
+  disabledFields: { x: number; y: number }[];
 }) {
   const [activeCell, setActiveCell] = useState<{ x: number; y: number } | null>(
     null
   );
+  console.log("original: ", originalSudoku);
 
   const gridDimensions = {
     2: "grid-cols-2 grid-rows-2",
@@ -21,13 +26,19 @@ export default function SudokuField({
   };
 
   const NumberField = ({ x, y }: { x: number; y: number }) => {
+    const isDisabled = disabledFields.some(
+      (field) => field.x === x && field.y === y
+    );
     return (
       <input
-        className="text-center border caret-transparent h-full w-full outline-0 focus:bg-green-200"
+        className={`text-center border caret-transparent h-full w-full outline-0 focus:bg-green-200 ${
+          isDisabled ? "bg-gray-100 font-bold text-blue-600" : "bg-white"
+        }`}
         tabIndex={0}
         type="text"
         autoComplete="off"
         name={`sudoku[${x}][${y}]`}
+        disabled={isDisabled}
         defaultValue={sudoku[x][y] === null ? "" : sudoku[x][y]}
         onKeyDown={(e) => {
           e.preventDefault();

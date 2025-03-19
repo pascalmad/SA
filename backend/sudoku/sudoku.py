@@ -94,24 +94,77 @@ class SudokuGenerator(SudokuSolver):
 
         self.model.set_objective(solver_objective, poi.ObjectiveSense.Minimize)
        
+    def remove_cell(self, difficulty="normal", max_attempts=None):
+        """
+        Entfernt Zellen aus dem Sudoku basierend auf dem gewählten Schwierigkeitsgrad.
         
-    def remove_cell(self):
+        Parameter:
+        - difficulty: 'easy', 'normal' oder 'hard'
+        - max_attempts: Maximale Anzahl von Versuchen, Zellen zu entfernen
+        """
+        # Prüfen, ob das Sudoku nach dem letzten Entfernen einer Zelle noch eine eindeutige Lösung hat
         self.solve()
         if self.model.get_model_attribute(poi.ModelAttribute.ObjectiveValue) < self.dimension**4:
             return
         
-        while True:
+        # Schwierigkeitsgrade bestimmen den Prozentsatz der Zellen, die gelöscht werden sollen
+        difficulty_levels = {
+            "easy": 0.3,     # 30% der Zellen werden entfernt (mehr Hinweise)
+            "normal": 0.5,   # 50% der Zellen werden entfernt
+            "hard": 0.7      # 70% der Zellen werden entfernt (weniger Hinweise)
+        }
+        
+        # Aktuelle Anzahl der entfernten Zellen zählen
+        total_cells = self.dimension**4
+        filled_cells = sum(1 for i in range(self.dimension**2) for j in range(self.dimension**2) if self.solution[i][j] is not None)
+        removed_cells = total_cells - filled_cells
+        
+        # Maximale Anzahl von Zellen, die basierend auf dem Schwierigkeitsgrad entfernt werden sollten
+        max_cells_to_remove = int(total_cells * difficulty_levels.get(difficulty, 0.5))
+        
+        # Wenn wir bereits das Maximum für den Schwierigkeitsgrad erreicht haben, beenden wir
+        if removed_cells >= max_cells_to_remove:
+            return
+            
+        # Versuche, eine neue Zelle zu finden, die entfernt werden kann
+        attempts = 0
+        max_try = max_attempts or total_cells  # Falls kein max_attempts angegeben ist, alle Zellen probieren
+        
+        while attempts < max_try:
             row, col = rnd.randint(0, self.dimension**2-1), rnd.randint(0, self.dimension**2-1)
             if self.solution[row][col] is not None:
-                break
+                # Zelle temporär entfernen
+                temp_value = self.solution[row][col]
+                self.solution[row][col] = None
+                self.model.delete_constraint(self.con[row][col])
+                
+                # Prüfen, ob noch eine eindeutige Lösung existiert
+                self.solve()
+                if self.model.get_model_attribute(poi.ModelAttribute.ObjectiveValue) < self.dimension**4:
+                    # Wenn keine eindeutige Lösung existiert, Zelle wiederherstellen
+                    self.solution[row][col] = temp_value
+                    self.con[row][col] = self.model.add_linear_constraint(self.x[row, col, temp_value-1], poi.Eq, 1.0)
+                else:
+                    # Wenn eine eindeutige Lösung existiert, weiter Zellen entfernen
+                    self.remove_cell(difficulty, max_attempts)
+                    return
+                    
+            attempts += 1
+            
+        # Wenn keine weitere Zelle entfernt werden kann, beenden wir
+        return
         
-        self.solution[row][col] = None
-        self.model.delete_constraint(self.con[row][col])
+    def get_incomplete_and_complete_sudoku(self, difficulty="normal"):
+        """
+        Erzeugt ein Sudoku mit dem angegebenen Schwierigkeitsgrad.
         
-        self.remove_cell()
+        Parameter:
+        - difficulty: 'easy', 'normal' oder 'hard'
         
-    def get_incomplete_and_complete_sudoku(self):
-        self.remove_cell()
+        Rückgabe:
+        - Das unvollständige Sudoku und die vollständige Lösung
+        """
+        self.remove_cell(difficulty)
         return self.solution, self.get_solution()
         
         
