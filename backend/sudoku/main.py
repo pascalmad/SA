@@ -64,6 +64,7 @@ def get_sudoku(dimension: int, difficulty: str = "normal"):
 def post_sudoku_solution(sudoku: UnsolvedSudoku):
     sudoku_solver = SudokuSolver(sudoku.dimension, sudoku.sudoku)
     solution = sudoku_solver.solve_sudoku()
+    print(solution)
     return JSONResponse(content=solution)
 
 @app.get("/killer-sudoku/{dimension}")

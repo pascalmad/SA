@@ -53,7 +53,6 @@ class Sudoku:
                 for k in range(s**2):
                     if solution[i, j, k] == 1:
                         sudoku[i][j] = k+1
-
         return sudoku
     
         
@@ -112,9 +111,9 @@ class SudokuGenerator(SudokuSolver):
         
         # Schwierigkeitsgrade bestimmen den Prozentsatz der Zellen, die gelöscht werden sollen
         difficulty_levels = {
-            "easy": 0.3,     # 30% der Zellen werden entfernt (mehr Hinweise)
-            "normal": 0.5,   # 50% der Zellen werden entfernt
-            "hard": 0.7      # 70% der Zellen werden entfernt (weniger Hinweise)
+            "easy": 0.5,     # 50% der Zellen werden entfernt (mehr Hinweise)
+            "normal": 0.65,   # 65% der Zellen werden entfernt
+            "hard": 0.8      # 80% der Zellen werden entfernt (weniger Hinweise)
         }
         
         # Aktuelle Anzahl der entfernten Zellen zählen
@@ -173,7 +172,7 @@ class SudokuGenerator(SudokuSolver):
 class KillerSudokuSolver(SudokuSolver):
     def __init__(self, s: int, sudoku: list, cages: list, S: list):
         super().__init__(s, sudoku)
-        for cage in range(len([a for a in S if a>=0])):
+        for cage in range(len(S)):
             self.model.add_linear_constraint(poi.quicksum([self.x[i,j,k]*(k+1) for i in range(s**2) for j in range(s**2) for k in range(s**2) if cages[i, j] == cage]), poi.Eq, S[cage])
             for k in range(s**2):
                 self.model.add_linear_constraint(poi.quicksum([self.x[i,j,k] for i in range(s**2) for j in range(s**2) if cages[i, j] == cage]), poi.Leq, 1.0)

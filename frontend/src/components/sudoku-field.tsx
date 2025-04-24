@@ -9,7 +9,7 @@ export default function SudokuField({
   updateSudoku,
   disabledFields,
 }: {
-  dimension: 2 | 3;
+  dimension: 2 | 3 | 4 | 5;
   sudoku: (number | null)[][];
   originalSudoku: (number | null)[][];
   updateSudoku: (x: number, y: number, value: number | null) => void;
@@ -23,6 +23,8 @@ export default function SudokuField({
   const gridDimensions = {
     2: "grid-cols-2 grid-rows-2",
     3: "grid-cols-3 grid-rows-3",
+    4: "grid-cols-4 grid-rows-4",
+    5: "grid-cols-5 grid-rows-5",
   };
 
   const NumberField = ({ x, y }: { x: number; y: number }) => {
@@ -68,7 +70,7 @@ export default function SudokuField({
         <div
           key={i}
           className={`border border-black size-48 grid ${
-            gridDimensions[dimension as 2 | 3]
+            gridDimensions[dimension as 2 | 3 | 4 | 5]
           }`}
         >
           {[...Array(dimension ** 2).keys()].map((j) => {

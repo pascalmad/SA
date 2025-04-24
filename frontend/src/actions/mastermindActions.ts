@@ -2,8 +2,9 @@
 
 import { Move } from "@/types/mastermind";
 
-// Backend URL (auf Port 8081 ändern)
-const API_BASE_URL = process.env.BACKEND_API_URL || "http://localhost:8081";
+// Backend URL using service name instead of localhost
+const API_BASE_URL =
+  process.env.MASTERMIND_API_URL || "http://mastermind-service:8081";
 
 // Mapping von Frontend-Farbnamen zu Backend-Farbindizes
 // Muss mit dem Backend konsistent sein!
