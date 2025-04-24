@@ -24,7 +24,10 @@ class Sudoku:
         for i in range(s**2):
             for k in range(s**2):
                 model.add_linear_constraint(poi.quicksum(x[i, :, k]), poi.Eq, 1.0)
-                model.add_linear_constraint(poi.quicksum(x[:, i, k]), poi.Eq, 1.0)
+   
+        for j in range(s**2):
+            for k in range(s**2):
+                model.add_linear_constraint(poi.quicksum(x[:, j, k]), poi.Eq, 1.0)
         for i in range(s**2):
             for j in range(s**2):
                 model.add_linear_constraint(poi.quicksum(x[i, j, :]), poi.Eq, 1.0)
@@ -166,6 +169,96 @@ class SudokuGenerator(SudokuSolver):
         """
         self.remove_cell(difficulty)
         return self.solution, self.get_solution()
+        
+class KillerSudokuSolver(SudokuSolver):
+    def __init__(self, s: int, sudoku: list, cages: list, S: list):
+        super().__init__(s, sudoku)
+        for cage in range(len([a for a in S if a>=0])):
+            self.model.add_linear_constraint(poi.quicksum([self.x[i,j,k]*(k+1) for i in range(s**2) for j in range(s**2) for k in range(s**2) if cages[i, j] == cage]), poi.Eq, S[cage])
+            for k in range(s**2):
+                self.model.add_linear_constraint(poi.quicksum([self.x[i,j,k] for i in range(s**2) for j in range(s**2) if cages[i, j] == cage]), poi.Leq, 1.0)
+        
+        
+        
+        
+class KillerSudokuGenerator(SudokuGenerator):
+    def __init__(self, s: int):
+        super().__init__(s)
+        self.cages = []  # Liste der Käfige [(Zellen), Summe]
+        
+    def generate_cages(self, min_cage_size=1, max_cage_size=4):
+        """
+        Generiert Käfige für ein Killer-Sudoku.
+        
+        Parameter:
+        - min_cage_size: Minimale Anzahl von Zellen in einem Käfig
+        - max_cage_size: Maximale Anzahl von Zellen in einem Käfig
+        
+        Rückgabe:
+        - Eine Liste von Käfigen, wobei jeder Käfig als Tupel (Liste von Zellen, Summe) dargestellt wird
+        """
+        s = self.dimension
+        # Liste aller Zellen im Sudoku
+        all_cells = [(i, j) for i in range(s**2) for j in range(s**2)]
+        # Zufällig mischen, um verschiedene Käfige zu erhalten
+        rnd.shuffle(all_cells)
+        
+        cages = []
+        remaining_cells = set(all_cells)
+        
+        while remaining_cells:
+            # Zufällige Startzelle auswählen
+            start_cell = rnd.choice(list(remaining_cells))
+            remaining_cells.remove(start_cell)
+            
+            # Cage erstellen mit der Startzelle
+            current_cage = [start_cell]
+            cage_size = rnd.randint(min_cage_size, min(max_cage_size, len(remaining_cells) + 1))
+            
+            # Weitere Zellen hinzufügen, die mit den bereits hinzugefügten Zellen verbunden sind
+            while len(current_cage) < cage_size and remaining_cells:
+                # Nachbarzellen aller Zellen im aktuellen Käfig finden
+                neighbors = set()
+                for cell in current_cage:
+                    i, j = cell
+                    # 4 Nachbarn: oben, unten, links, rechts
+                    possible_neighbors = [(i-1, j), (i+1, j), (i, j-1), (i, j+1)]
+                    for neighbor in possible_neighbors:
+                        if (0 <= neighbor[0] < s**2 and 
+                            0 <= neighbor[1] < s**2 and 
+                            neighbor in remaining_cells):
+                            neighbors.add(neighbor)
+                
+                if not neighbors:
+                    break  # Keine weiteren Nachbarn verfügbar
+                
+                # Zufälligen Nachbar hinzufügen
+                next_cell = rnd.choice(list(neighbors))
+                current_cage.append(next_cell)
+                remaining_cells.remove(next_cell)
+            
+            # Summe des Käfigs berechnen basierend auf der Lösung
+            cage_sum = sum(self.get_solution()[i][j] for i, j in current_cage)
+            
+            # Käfig zur Liste hinzufügen
+            cages.append((current_cage, cage_sum))
+        
+        self.cages = cages
+        return cages
+    
+    def get_killer_sudoku(self, difficulty="normal"):
+        """
+        Erzeugt ein Killer-Sudoku mit dem angegebenen Schwierigkeitsgrad.
+        
+        Parameter:
+        - difficulty: 'easy', 'normal' oder 'hard'
+        
+        Rückgabe:
+        - Das unvollständige Sudoku, die vollständige Lösung und die Käfige mit Summen
+        """
+        self.remove_cell(difficulty)
+        self.generate_cages()
+        return self.solution, self.get_solution(), self.cages
         
         
         

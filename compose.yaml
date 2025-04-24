@@ -13,3 +13,12 @@ services:
     command: uvicorn main:app --host 0.0.0.0 --port 8080 --reload
     ports:
       - "8080:8080"
+
+  mastermind-service:
+    image: sa-mastermind-service
+    build:
+      context: ./backend/mastermind
+      dockerfile: ../Dockerfile
+    command: uvicorn main:app --host 0.0.0.0 --port 8081 --reload
+    ports:
+      - "8081:8081"
