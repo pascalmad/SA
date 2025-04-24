@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import SudokuField from "./sudoku-field";
+import KillerSudokuField from "./killer-sudoku-field";
 import { Sudoku } from "@/types/sudoku";
 import { cloneDeep } from "lodash";
 
-export default function SudokuGenerate({
+export default function KillerSudokuGenerate({
   incompleteSudoku,
   completeSudoku,
 }: {
@@ -17,11 +17,16 @@ export default function SudokuGenerate({
   const [sudoku, setSudoku] = useState<(number | null)[][]>(
     cloneDeep(incompleteSudoku.sudoku)
   );
+
   const updateSudoku = (x: number, y: number, value: number | null) => {
     const newSudoku = cloneDeep(sudoku);
     newSudoku[x][y] = value;
     setSudoku(newSudoku);
   };
+
+  if (!incompleteSudoku.cages) {
+    return <div>Fehler: Keine Käfige für das Killer-Sudoku gefunden</div>;
+  }
 
   return (
     <div className="flex flex-col items-center">
@@ -30,13 +35,15 @@ export default function SudokuGenerate({
         <span className="capitalize">
           {incompleteSudoku.difficulty || "normal"}
         </span>
+        <span className="font-bold ml-4">Typ: </span>
+        <span>Killer-Sudoku</span>
       </div>
-      <SudokuField
-        dimension={3}
+      <KillerSudokuField
+        dimension={incompleteSudoku.dimension}
         sudoku={sudoku}
-        originalSudoku={incompleteSudoku.sudoku}
         updateSudoku={updateSudoku}
         disabledFields={incompleteSudoku.disabledFields}
+        cages={incompleteSudoku.cages}
       />
     </div>
   );

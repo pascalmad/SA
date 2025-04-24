@@ -1,93 +1,57 @@
 "use client";
 
-import { generateSudoku } from "@/actions/sudokuActions";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Sudoku } from "@/types/sudoku";
-import { useEffect, useState } from "react";
-import { Clock, Pencil, Eraser, RotateCcw } from "lucide-react";
+import { Pencil, Eraser, RotateCcw, Clock, Info } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { cloneDeep } from "lodash";
-import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
-export default function SudokuPage() {
-  const [difficulty, setDifficulty] = useState<"easy" | "normal" | "hard">(
-    "normal"
-  );
-  const [loading, setLoading] = useState(false);
-  const [incompleteSudoku, setIncompleteSudoku] = useState<Sudoku | null>(null);
-  const [, setCompleteSudoku] = useState<Sudoku | null>(null);
+// Sample Sudoku puzzle (0 represents empty cells)
+const samplePuzzle = [
+  [5, 3, 0, 0, 7, 0, 0, 0, 0],
+  [6, 0, 0, 1, 9, 5, 0, 0, 0],
+  [0, 9, 8, 0, 0, 0, 0, 6, 0],
+  [8, 0, 0, 0, 6, 0, 0, 0, 3],
+  [4, 0, 0, 8, 0, 3, 0, 0, 1],
+  [7, 0, 0, 0, 2, 0, 0, 0, 6],
+  [0, 6, 0, 0, 0, 0, 2, 8, 0],
+  [0, 0, 0, 4, 1, 9, 0, 0, 5],
+  [0, 0, 0, 0, 8, 0, 0, 7, 9],
+];
 
-  // Zusätzliche States für die verbesserte UI
-  const [board, setBoard] = useState<(number | null)[][]>([]);
+export default function SudokuSolver() {
+  const [board, setBoard] = useState(samplePuzzle);
   const [selectedCell, setSelectedCell] = useState<[number, number] | null>(
     null
   );
   const [isNoteMode, setIsNoteMode] = useState(false);
-  const [notes, setNotes] = useState<Record<string, number[]>>({});
+  const [notes, setNotes] = useState<Record<string, number[]>>({}); // Format: "row-col": [1, 2, 3]
   const [timer, setTimer] = useState(0);
-  const [isRunning, setIsRunning] = useState(false);
-  const [conflicts, setConflicts] = useState<string[]>([]);
+  const [isRunning, setIsRunning] = useState(true);
+  const [difficulty, setDifficulty] = useState("medium");
+  const [conflicts, setConflicts] = useState<string[]>([]); // Format: "row-col"
 
-  async function loadSudoku(difficultyLevel: "easy" | "normal" | "hard") {
-    setLoading(true);
-    try {
-      const response = await generateSudoku(3, difficultyLevel);
-
-      // Erstelle die Liste der deaktivierten Felder
-      const disabledFields = response.unsolvedSudoku
-        .flatMap((row: (number | null)[], x: number) =>
-          row.map((value: number | null, y: number) =>
-            value !== null ? { x, y } : null
-          )
-        )
-        .filter(
-          (
-            field: { x: number; y: number } | null
-          ): field is { x: number; y: number } => field !== null
-        );
-
-      const incompleteSudokuData = {
-        dimension: 3 as const,
-        sudoku: response.unsolvedSudoku,
-        disabledFields: disabledFields,
-        difficulty: difficultyLevel,
-      };
-
-      const completeSudokuData = {
-        dimension: 3 as const,
-        sudoku: response.solvedSudoku,
-        disabledFields: disabledFields,
-        difficulty: difficultyLevel,
-      };
-
-      setIncompleteSudoku(incompleteSudokuData);
-      setCompleteSudoku(completeSudokuData);
-
-      // Konvertiere das Backend-Format (2D-Array mit null-Werten) in ein Format für unsere UI
-      // Ein 9x9 Array mit Zahlen, wobei 0 leere Zellen repräsentiert
-      const formattedBoard = response.unsolvedSudoku.map(
-        (row: (number | null)[]) =>
-          row.map((cell: number | null) => (cell === null ? 0 : cell))
-      );
-
-      setBoard(formattedBoard);
-
-      // Zurücksetzen der Spielzustände
-      setNotes({});
-      setSelectedCell(null);
-      setTimer(0);
-      setIsRunning(true);
-      setConflicts([]);
-    } catch (error) {
-      console.error("Fehler beim Laden des Sudokus:", error);
-    } finally {
-      setLoading(false);
+  // Einfache Toast-Funktion als Ersatz für useToast
+  const toast = (props: {
+    title: string;
+    description: string;
+    duration?: number;
+    variant?: string;
+  }) => {
+    // Nur kritische Nachrichten anzeigen (Konflikte und Gewinnmeldung)
+    if (props.title === "Warning" || props.title === "Congratulations!") {
+      console.log(`Toast: ${props.title} - ${props.description}`);
     }
-  }
+    // Andere Nachrichten werden ignoriert
+  };
 
-  // Timer Effect
+  // Timer effect
   useEffect(() => {
     let interval: NodeJS.Timeout;
 
@@ -109,20 +73,6 @@ export default function SudokuPage() {
       .padStart(2, "0")}`;
   };
 
-  // Initialer Ladeprozess
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      loadSudoku(difficulty);
-    }
-  }, [difficulty]);
-
-  // Hilfsfunktion: Ursprüngliche Zahlen (nicht veränderbar)
-  const isOriginalCell = (row: number, col: number): boolean => {
-    if (!incompleteSudoku) return false;
-    const originalValue = incompleteSudoku.sudoku[row][col];
-    return originalValue !== null;
-  };
-
   // Handle cell selection
   const handleCellClick = (row: number, col: number) => {
     setSelectedCell([row, col]);
@@ -131,12 +81,15 @@ export default function SudokuPage() {
   // Check if a cell has conflicts
   const hasConflict = (row: number, col: number) => {
     if (board[row][col] === 0) return false;
+
     const cellKey = `${row}-${col}`;
+
+    // Die Konflikte werden nun in useState gespeichert
     return conflicts.includes(cellKey);
   };
 
   // Update conflicts in the board
-  const updateConflicts = (newBoard: (number | null)[][]) => {
+  const updateConflicts = (newBoard: number[][]) => {
     const newConflicts: string[] = [];
 
     // Check for conflicts in rows
@@ -144,7 +97,7 @@ export default function SudokuPage() {
       const rowValues: Record<number, number[]> = {};
       for (let col = 0; col < 9; col++) {
         const cellValue = newBoard[row][col];
-        if (cellValue === 0 || cellValue === null) continue;
+        if (cellValue === 0) continue;
 
         if (!rowValues[cellValue]) rowValues[cellValue] = [];
         rowValues[cellValue].push(col);
@@ -163,7 +116,7 @@ export default function SudokuPage() {
       const colValues: Record<number, number[]> = {};
       for (let row = 0; row < 9; row++) {
         const cellValue = newBoard[row][col];
-        if (cellValue === 0 || cellValue === null) continue;
+        if (cellValue === 0) continue;
 
         if (!colValues[cellValue]) colValues[cellValue] = [];
         colValues[cellValue].push(row);
@@ -187,7 +140,7 @@ export default function SudokuPage() {
             const row = boxRow * 3 + r;
             const col = boxCol * 3 + c;
             const cellValue = newBoard[row][col];
-            if (cellValue === 0 || cellValue === null) continue;
+            if (cellValue === 0) continue;
 
             if (!boxValues[cellValue]) boxValues[cellValue] = [];
             boxValues[cellValue].push([row, col]);
@@ -209,14 +162,14 @@ export default function SudokuPage() {
     return newConflicts.length === 0;
   };
 
-  // Handle number input
+  // Handle number input mit verbesserten Konfliktchecks
   const handleNumberInput = (num: number) => {
     if (!selectedCell) return;
 
     const [row, col] = selectedCell;
 
     // Check if the cell is part of the original puzzle
-    if (isOriginalCell(row, col)) return;
+    if (samplePuzzle[row][col] !== 0) return;
 
     if (isNoteMode) {
       // Handle notes mode
@@ -238,19 +191,26 @@ export default function SudokuPage() {
       }
     } else {
       // Normal mode - update the board
-      const newBoard = cloneDeep(board);
+      const newBoard = [...board.map((r) => [...r])]; // Create a deep copy of the board
 
       // Toggle number: if same number already exists, set to 0, otherwise set to clicked number
       if (newBoard[row][col] === num) {
         newBoard[row][col] = 0;
+        console.log(`Removing number ${num} at [${row},${col}]`);
+        toast({
+          title: "Number removed",
+          description: `Removed ${num} from cell.`,
+          duration: 1500,
+        });
 
-        // Lösche auch Notizen, wenn die Zelle geleert wird
+        // Auch Notizen löschen, wenn die Zelle geleert wird
         const cellKey = `${row}-${col}`;
         const newNotes = { ...notes };
         delete newNotes[cellKey];
         setNotes(newNotes);
       } else {
         newBoard[row][col] = num;
+        console.log(`Adding number ${num} at [${row},${col}]`);
 
         // Lösche alle Notizen für diese Zelle, wenn eine Zahl eingetragen wird
         const cellKey = `${row}-${col}`;
@@ -259,31 +219,50 @@ export default function SudokuPage() {
           delete newNotes[cellKey];
           setNotes(newNotes);
         }
+
+        // Überprüfe auf Konflikte nach dem Hinzufügen
+        const noConflicts = updateConflicts(newBoard);
+
+        if (noConflicts) {
+          // Prüfe, ob Sudoku vollständig und korrekt gelöst wurde
+          const emptyCells = newBoard
+            .flat()
+            .filter((cell) => cell === 0).length;
+          if (emptyCells === 0) {
+            toast({
+              title: "Congratulations!",
+              description: "You've solved the Sudoku puzzle!",
+              duration: 3000,
+            });
+            setIsRunning(false); // Stoppe den Timer bei erfolgreichem Lösen
+          }
+        } else {
+          // Bei Konflikten einen Warnungstoast anzeigen
+          toast({
+            title: "Warning",
+            description: "This move creates conflicts with other numbers.",
+            variant: "destructive",
+            duration: 2000,
+          });
+        }
       }
 
       setBoard(newBoard);
-      updateConflicts(newBoard);
+      console.log("Current board state:", newBoard);
     }
   };
 
   // Effect, um Konflikte zu aktualisieren, wenn sich das Board ändert
   useEffect(() => {
-    if (board.length > 0) {
-      updateConflicts(board);
-    }
+    updateConflicts(board);
   }, [board]);
 
   // Reset the board
   const resetBoard = () => {
-    if (incompleteSudoku) {
-      const formattedBoard = incompleteSudoku.sudoku.map((row) =>
-        row.map((cell) => (cell === null ? 0 : cell))
-      );
-      setBoard(formattedBoard);
-      setNotes({});
-      setTimer(0);
-      setIsRunning(true);
-    }
+    setBoard(samplePuzzle);
+    setNotes({});
+    setTimer(0);
+    setIsRunning(true);
   };
 
   // Erase the selected cell
@@ -293,10 +272,10 @@ export default function SudokuPage() {
     const [row, col] = selectedCell;
 
     // Check if the cell is part of the original puzzle
-    if (isOriginalCell(row, col)) return;
+    if (samplePuzzle[row][col] !== 0) return;
 
     // Deep copy des Boards, um unerwartete Nebeneffekte zu vermeiden
-    const newBoard = cloneDeep(board);
+    const newBoard = [...board.map((r) => [...r])];
 
     if (newBoard[row][col] !== 0) {
       newBoard[row][col] = 0;
@@ -312,106 +291,6 @@ export default function SudokuPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="container max-w-4xl mx-auto px-4 py-8">
-        <div className="mb-6 text-center">
-          <h1 className="text-3xl font-bold mb-2">Sudoku</h1>
-          <p className="text-muted-foreground mb-2">
-            Löse das Puzzle, indem du jede Zeile, Spalte und Box mit den Zahlen
-            1-9 auffüllst
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="md:col-span-2">
-            <Card>
-              <CardContent className="p-4">
-                {/* Game info skeleton */}
-                <div className="flex justify-between items-center mb-4 bg-card p-3 rounded-lg shadow">
-                  <div className="flex items-center gap-2">
-                    <Skeleton className="h-6 w-16 rounded-full" />
-                    <Skeleton className="h-4 w-24" />
-                  </div>
-                  <div className="flex items-center gap-2 bg-muted/40 px-3 py-1 rounded-full">
-                    <Clock className="h-4 w-4 text-muted" />
-                    <Skeleton className="h-4 w-10" />
-                  </div>
-                </div>
-
-                {/* Sudoku grid skeleton */}
-                <div className="aspect-square w-full max-w-md mx-auto animate-pulse">
-                  <div className="grid grid-cols-9 gap-[1px] border-2 border-primary/30 shadow-lg">
-                    {Array.from({ length: 9 }).map((_, rowIndex) =>
-                      Array.from({ length: 9 }).map((_, colIndex) => {
-                        // Border styling for 3x3 boxes
-                        const borderRight =
-                          (colIndex + 1) % 3 === 0 && colIndex < 8
-                            ? "border-r-[3px] border-r-primary/30"
-                            : "border-r border-r-primary/20";
-                        const borderBottom =
-                          (rowIndex + 1) % 3 === 0 && rowIndex < 8
-                            ? "border-b-[3px] border-b-primary/30"
-                            : "border-b border-b-primary/20";
-
-                        return (
-                          <div
-                            key={`${rowIndex}-${colIndex}`}
-                            className={`aspect-square flex items-center justify-center relative cursor-pointer transition-colors bg-muted/20 ${borderRight} ${borderBottom}`}
-                          >
-                            {/* Ein paar zufällige Zellen mit Skeleton Zahlen füllen */}
-                            {Math.random() > 0.7 && (
-                              <Skeleton className="h-6 w-6 rounded-md" />
-                            )}
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div>
-            <Card className="mb-4">
-              <CardContent className="p-4">
-                {/* Buttons skeleton */}
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {Array.from({ length: 3 }).map((_, i) => (
-                    <Skeleton key={i} className="h-9 flex-1" />
-                  ))}
-                </div>
-
-                {/* Mode info skeleton */}
-                <Skeleton className="h-20 w-full mb-3" />
-
-                {/* Number buttons skeleton */}
-                <div className="grid grid-cols-3 gap-2">
-                  {Array.from({ length: 9 }).map((_, i) => (
-                    <Skeleton key={i} className="h-12 w-full" />
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-4">
-                <Skeleton className="h-6 w-40 mb-3" />
-                <div className="grid grid-cols-3 gap-2 mb-4">
-                  {Array.from({ length: 3 }).map((_, i) => (
-                    <Skeleton key={i} className="h-9 w-full" />
-                  ))}
-                </div>
-                <Skeleton className="h-9 w-full" />
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="container max-w-4xl mx-auto px-4 py-8">
       <motion.div
@@ -419,11 +298,38 @@ export default function SudokuPage() {
         animate={{ opacity: 1, y: 0 }}
         className="mb-6 text-center"
       >
-        <h1 className="text-3xl font-bold mb-2">Sudoku</h1>
+        <h1 className="text-3xl font-bold mb-2">Sudoku Solver</h1>
         <p className="text-muted-foreground mb-2">
-          Löse das Puzzle, indem du jede Zeile, Spalte und Box mit den Zahlen
-          1-9 auffüllst
+          Solve the puzzle by filling in the grid
         </p>
+
+        <div className="flex justify-center items-center gap-2 mb-3">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-1"
+              >
+                <Info className="h-4 w-4" />
+                How to Play
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80 text-sm">
+              <h3 className="font-medium mb-2">How to Play Sudoku</h3>
+              <ul className="space-y-1 list-disc pl-4">
+                <li>Fill each cell with numbers 1-9</li>
+                <li>
+                  Each row, column and 3×3 box must contain all numbers 1-9
+                  without repetition
+                </li>
+                <li>Pre-filled numbers (bold) cannot be changed</li>
+                <li>Use notes mode to add candidate numbers</li>
+                <li>Conflicting numbers will be highlighted in red</li>
+              </ul>
+            </PopoverContent>
+          </Popover>
+        </div>
       </motion.div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -437,8 +343,7 @@ export default function SudokuPage() {
                     {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}
                   </span>
                   <span className="text-sm text-muted-foreground">
-                    {board.flat().filter((cell) => cell === 0).length}{" "}
-                    verbleibend
+                    {board.flat().filter((cell) => cell === 0).length} remaining
                   </span>
                 </div>
                 <div className="flex items-center gap-2 bg-muted/40 px-3 py-1 rounded-full">
@@ -449,15 +354,15 @@ export default function SudokuPage() {
 
               {/* Sudoku grid */}
               <div className="aspect-square w-full max-w-md mx-auto">
-                <div className="grid grid-cols-9 border-2 border-primary shadow-lg overflow-hidden">
+                <div className="grid grid-cols-9 gap-[1px] border-2 border-primary shadow-lg">
                   {board.map((row, rowIndex) =>
                     row.map((cell, colIndex) => {
-                      const isOriginal = isOriginalCell(rowIndex, colIndex);
+                      const isOriginal = samplePuzzle[rowIndex][colIndex] !== 0;
                       const isSelected =
                         selectedCell &&
                         selectedCell[0] === rowIndex &&
                         selectedCell[1] === colIndex;
-                      const hasErr = hasConflict(rowIndex, colIndex);
+                      const hasError = hasConflict(rowIndex, colIndex);
                       const isSameRow =
                         selectedCell && selectedCell[0] === rowIndex;
                       const isSameCol =
@@ -473,7 +378,7 @@ export default function SudokuPage() {
                         board[selectedCell[0]][selectedCell[1]] !== 0 &&
                         board[selectedCell[0]][selectedCell[1]] === cell;
 
-                      // Border styling for 3x3 boxes - using inset borders to avoid gaps
+                      // Border styling for 3x3 boxes - verstärkte Borders für bessere Sichtbarkeit
                       const borderRight =
                         (colIndex + 1) % 3 === 0 && colIndex < 8
                           ? "border-r-[3px] border-r-primary"
@@ -494,7 +399,7 @@ export default function SudokuPage() {
                             borderRight,
                             borderBottom,
                             isSelected
-                              ? "bg-blue-200 dark:bg-blue-600/60"
+                              ? "bg-primary text-foreground dark:bg-primary/80 dark:text-white"
                               : isSameRow || isSameCol || isSameBox
                               ? "bg-primary/10 dark:bg-primary/20"
                               : isSameNumber && cell !== 0
@@ -502,7 +407,7 @@ export default function SudokuPage() {
                               : isOriginal
                               ? "bg-blue-50 dark:bg-secondary/30"
                               : "bg-background",
-                            hasErr &&
+                            hasError &&
                               "bg-destructive/30 dark:bg-destructive/40",
                             isOriginal ? "font-bold" : "font-normal"
                           )}
@@ -513,11 +418,11 @@ export default function SudokuPage() {
                               className={cn(
                                 "text-lg md:text-xl",
                                 isSelected
-                                  ? "text-blue-900 dark:text-white"
+                                  ? "text-white dark:text-white"
                                   : isOriginal
                                   ? "text-blue-700 font-bold dark:text-white"
                                   : "text-slate-600 dark:text-gray-200",
-                                hasErr &&
+                                hasError &&
                                   "text-destructive dark:text-red-400 font-bold"
                               )}
                             >
@@ -529,12 +434,7 @@ export default function SudokuPage() {
                                 {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
                                   <div
                                     key={num}
-                                    className={cn(
-                                      "flex items-center justify-center",
-                                      isSelected
-                                        ? "text-blue-900 dark:text-white"
-                                        : "text-foreground/60 dark:text-gray-400"
-                                    )}
+                                    className="flex items-center justify-center text-foreground/60 dark:text-gray-400"
                                   >
                                     {cellNotes.includes(num) ? num : ""}
                                   </div>
@@ -606,14 +506,14 @@ export default function SudokuPage() {
                   ></div>
                   <p className="text-sm font-medium">
                     {isNoteMode
-                      ? "Notizen-Modus: Kandidaten hinzufügen"
-                      : "Normal-Modus: Zelle ausfüllen"}
+                      ? "Notes Mode: Add candidate numbers"
+                      : "Normal Mode: Fill cells with numbers"}
                   </p>
                 </div>
                 <p className="text-xs text-muted-foreground pl-6">
                   {isNoteMode
-                    ? "Klicke mehrere Zahlen als Kandidaten"
-                    : "Klicke eine Zahl, um sie in der ausgewählten Zelle zu platzieren"}
+                    ? "Click multiple numbers as candidates"
+                    : "Click a number to place it in the selected cell"}
                 </p>
               </div>
 
@@ -654,32 +554,32 @@ export default function SudokuPage() {
 
           <Card>
             <CardContent className="p-4">
-              <h3 className="font-medium mb-3">Schwierigkeitsgrad</h3>
+              <h3 className="font-medium mb-3">Choose Difficulty</h3>
               <div className="grid grid-cols-3 gap-2 mb-4">
                 <Button
                   variant={difficulty === "easy" ? "default" : "outline"}
                   onClick={() => setDifficulty("easy")}
                   className="transition-colors"
                 >
-                  Leicht
+                  Easy
                 </Button>
                 <Button
-                  variant={difficulty === "normal" ? "default" : "outline"}
-                  onClick={() => setDifficulty("normal")}
+                  variant={difficulty === "medium" ? "default" : "outline"}
+                  onClick={() => setDifficulty("medium")}
                   className="transition-colors"
                 >
-                  Normal
+                  Medium
                 </Button>
                 <Button
                   variant={difficulty === "hard" ? "default" : "outline"}
                   onClick={() => setDifficulty("hard")}
                   className="transition-colors"
                 >
-                  Schwer
+                  Hard
                 </Button>
               </div>
-              <Button onClick={() => loadSudoku(difficulty)} className="w-full">
-                Neues Sudoku
+              <Button onClick={resetBoard} className="w-full">
+                Start New Game
               </Button>
             </CardContent>
           </Card>
