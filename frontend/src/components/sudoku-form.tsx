@@ -18,7 +18,7 @@ import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
 import { Sudoku } from "@/types/sudoku";
 
 const formSchema = z.object({
-  dimension: z.literal(2).or(z.literal(3)),
+  dimension: z.literal(2).or(z.literal(3)).or(z.literal(4)).or(z.literal(5)),
   sudoku: z.array(z.array(z.number().nullable())),
   disabledFields: z.array(z.object({ x: z.number(), y: z.number() })),
 });
@@ -78,7 +78,10 @@ export default function SudokuForm() {
               <FormControl>
                 <RadioGroup
                   onValueChange={(value) => {
-                    form.setValue("dimension", parseInt(value) as 2 | 3);
+                    form.setValue(
+                      "dimension",
+                      parseInt(value) as 2 | 3 | 4 | 5
+                    );
                     form.setValue("sudoku", emptySudoku(parseInt(value)));
                   }}
                   defaultValue={field.value.toString()}
@@ -95,6 +98,18 @@ export default function SudokuForm() {
                       <RadioGroupItem value="3" />
                     </FormControl>
                     <FormLabel className="font-normal">3</FormLabel>
+                  </FormItem>
+                  <FormItem className="flex items-center space-x-3 space-y-0">
+                    <FormControl>
+                      <RadioGroupItem value="4" />
+                    </FormControl>
+                    <FormLabel className="font-normal">4</FormLabel>
+                  </FormItem>
+                  <FormItem className="flex items-center space-x-3 space-y-0">
+                    <FormControl>
+                      <RadioGroupItem value="5" />
+                    </FormControl>
+                    <FormLabel className="font-normal">5</FormLabel>
                   </FormItem>
                 </RadioGroup>
               </FormControl>

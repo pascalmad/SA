@@ -4,6 +4,9 @@ services:
     build: ./frontend
     ports:
       - "3000:3000"
+    environment:
+      - SUDOKU_API_URL=http://sudoku-service:8080
+      - MASTERMIND_API_URL=http://mastermind-service:8081
     
   sudoku-service:
     image: sa-sudoku-service

@@ -2,8 +2,22 @@
 
 import { Sudoku } from "@/types/sudoku";
 
+// Use service name instead of localhost
+const API_BASE_URL = process.env.SUDOKU_API_URL || "http://sudoku-service:8080";
+
 export async function solveSudoku(sudoku: Sudoku) {
-  const response = await fetch("http://localhost:8080/sudoku/solve", {
+  // For dimensions 4 and 5, we need to validate here because the backend might not support them yet
+  if (sudoku.dimension > 3) {
+    // Check if there's any input to solve
+    const hasInput = sudoku.sudoku.some((row) =>
+      row.some((cell) => cell !== null)
+    );
+    if (!hasInput) {
+      throw new Error("Please enter some numbers to solve");
+    }
+  }
+
+  const response = await fetch(`${API_BASE_URL}/sudoku/solve`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -26,7 +40,7 @@ export async function generateSudoku(
   difficulty: string = "normal"
 ) {
   const response = await fetch(
-    `http://localhost:8080/sudoku/${dimension}?difficulty=${difficulty}`,
+    `${API_BASE_URL}/sudoku/${dimension}?difficulty=${difficulty}`,
     {
       method: "GET",
     }
@@ -47,7 +61,7 @@ export async function generateKillerSudoku(
   difficulty: string = "normal"
 ) {
   const response = await fetch(
-    `http://localhost:8080/killer-sudoku/${dimension}?difficulty=${difficulty}`,
+    `${API_BASE_URL}/killer-sudoku/${dimension}?difficulty=${difficulty}`,
     {
       method: "GET",
     }
@@ -80,10 +94,7 @@ export async function solveKillerSudoku(sudoku: Sudoku) {
     cageSums[index] = cage.sum;
   });
 
-  console.log(cagesArray);
-  console.log(cageSums);
-
-  const response = await fetch("http://localhost:8080/killer-sudoku/solve", {
+  const response = await fetch(`${API_BASE_URL}/killer-sudoku/solve`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

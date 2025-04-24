@@ -42,7 +42,7 @@ class Mastermind:
                     self.x[p, c] for p in range(NUM_PINS) 
                                  for c in range(NUM_COLORS) 
                                  if C[t, p, c] != 1
-                                 if any([(C[t, q, c] == 1 and self.x[q, c] != 1) for q in range(NUM_PINS)])             
+                                 if any([C[t, q, c] == 1 for q in range(NUM_PINS)])             
                     ])
                 self.model.add_linear_constraint(white_pins_sum, poi.Geq, B[t])
 

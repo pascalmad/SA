@@ -10,7 +10,7 @@ export default function KillerSudokuField({
   disabledFields,
   cages,
 }: {
-  dimension: 2 | 3;
+  dimension: 2 | 3 | 4 | 5;
   sudoku: (number | null)[][];
   updateSudoku: (x: number, y: number, value: number | null) => void;
   disabledFields: { x: number; y: number }[];
@@ -23,6 +23,8 @@ export default function KillerSudokuField({
   const gridDimensions = {
     2: "grid-cols-2 grid-rows-2",
     3: "grid-cols-3 grid-rows-3",
+    4: "grid-cols-4 grid-rows-4",
+    5: "grid-cols-5 grid-rows-5",
   };
 
   // Graph-Färbungsalgorithmus für die Käfige
@@ -249,7 +251,7 @@ export default function KillerSudokuField({
         <div
           key={i}
           className={`border border-black size-48 grid ${
-            gridDimensions[dimension as 2 | 3]
+            gridDimensions[dimension as 2 | 3 | 4 | 5]
           }`}
         >
           {[...Array(dimension ** 2).keys()].map((j) => {
