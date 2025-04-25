@@ -1,0 +1,27 @@
+services:
+  frontend:
+    image: sa-frontend
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - SUDOKU_API_URL=http://sudoku-service:8080
+      - MASTERMIND_API_URL=http://mastermind-service:8081
+    
+  sudoku-service:
+    image: sa-sudoku-service
+    build:
+      context: ./backend/sudoku
+      dockerfile: ../Dockerfile
+    command: uvicorn main:app --host 0.0.0.0 --port 8080 --reload
+    ports:
+      - "8080:8080"
+
+  mastermind-service:
+    image: sa-mastermind-service
+    build:
+      context: ./backend/mastermind
+      dockerfile: ../Dockerfile
+    command: uvicorn main:app --host 0.0.0.0 --port 8081 --reload
+    ports:
+      - "8081:8081"
