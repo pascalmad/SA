@@ -5,10 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 import numpy as np
 
-from aminisikim import amk_create
 from sudoku import KillerSudokuGenerator, KillerSudokuSolver, SudokuGenerator, SudokuSolver
-from create import create_sudoku
-from solve import solve_sudoku
 
 
 app = FastAPI()

@@ -240,19 +240,31 @@ export default function KillerSudoku() {
     return cageColors[(cageId - 1) % cageColors.length];
   };
 
-  // Check if a cell is the top-left cell of its cage (to display the sum)
-  const isTopLeftOfCage = (row: number, col: number) => {
+  // Get a cell to display the cage sum (primary choice is top-left, fallbacks for unusual shapes)
+  const getCageSumDisplayCell = (row: number, col: number) => {
     const cage = getCageForCell(row, col);
     if (!cage) return false;
 
+    // Find the "primary" display cell (top-left most)
     const [topRow, leftCol] = cage.cells.reduce(
       ([minRow, minCol], [r, c]) => {
-        return [Math.min(minRow, r), Math.min(minCol, c)];
+        if (r < minRow) return [r, c];
+        if (r === minRow && c < minCol) return [r, c];
+        return [minRow, minCol];
       },
       [9, 9]
     );
 
-    return row === topRow && col === leftCol;
+    // If this is the primary display cell, show the sum
+    if (row === topRow && col === leftCol) return true;
+
+    // If we somehow couldn't find a primary cell, use the first cell in the cage
+    // This should never happen with the logic above, but serves as a fallback
+    if (topRow === 9 || leftCol === 9) {
+      return cage.cells[0][0] === row && cage.cells[0][1] === col;
+    }
+
+    return false;
   };
 
   // Reset the board and cages
@@ -374,7 +386,7 @@ export default function KillerSudoku() {
                           // Get cage information
                           const cage = getCageForCell(rowIndex, colIndex);
                           const cageColor = cage ? getCageColor(cage.id) : "";
-                          const showCageSum = isTopLeftOfCage(
+                          const showCageSum = getCageSumDisplayCell(
                             rowIndex,
                             colIndex
                           );
